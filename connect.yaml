@@ -1,0 +1,44 @@
+deployAs:
+  - name: job
+    applicationType: job
+    endpoint: /job
+    properties:
+      schedule: "30 3 * * *"
+    configuration:
+      standardConfiguration:
+        - key: CTP_REGION
+          description: commercetools Composable Commerce API region
+          required: true
+          default: "europe-west1.gcp"
+      securedConfiguration:
+        - key: CTP_PROJECT_KEY
+          description: commercetools Composable Commerce project key
+          required: true
+        - key: CTP_CLIENT_ID
+          description: commercetools Composable Commerce client ID
+          required: true
+        - key: CTP_CLIENT_SECRET
+          description: commercetools Composable Commerce client secret
+          required: true
+        - key: CTP_SCOPE
+          description: commercetools Composable Commerce client scope
+          required: true
+        - key: AWS_ACCESS_KEY_ID
+          description: key
+          required: true
+        - key: AWS_SECRET_ACCESS_KEY
+          description: access key
+          required: true
+        - key: AWS_S3_BUCKET_NAME
+          description: bucketname
+          required: true
+# inheritAs:
+#   configuration:
+#     securedConfiguration:
+#       - key: GLOBAL_SECURED_CONFIGURATION
+#         description: This secured configuration will configuration will be applied to all applications
+#         required: true
+#     standardConfiguration:
+#       - key: GLOBAL_STANDARD_CONFIGURATION
+#         description: This standard configuration will configuration will be applied to all applications
+#         required: true
