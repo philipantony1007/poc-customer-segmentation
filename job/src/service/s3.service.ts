@@ -9,9 +9,11 @@ const s3Client = new S3Client({
   },
 });
 
-// Define the S3 bucket and the file's key (path within the bucket)
+// Define the S3 bucket and dynamically create the file's key (path within the bucket)
 const bucketName = process.env.AWS_S3_BUCKET_NAME!;
-const fileKey = 'customer-segmentation/segmented-result/2024-11-08.json';
+const currentDate = new Date();
+const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
+const fileKey = `customer-segmentation/segmented-result/${formattedDate}.json`;  // Use the date-only format
 
 // Function to fetch JSON from S3
 export const fetchJsonFromS3 = async (): Promise<any> => {
