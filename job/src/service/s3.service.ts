@@ -1,6 +1,8 @@
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";  // Import necessary classes
+// s3.service.ts
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3ConfigError } from "../errors/extendedCustom.error";
+import CustomError from "../errors/custom.error";
 
-// Create an S3 client instance
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'us-east-1',
   credentials: {
@@ -9,35 +11,33 @@ const s3Client = new S3Client({
   },
 });
 
-// Define the S3 bucket and dynamically create the file's key (path within the bucket)
 const bucketName = process.env.AWS_S3_BUCKET_NAME!;
 const currentDate = new Date();
 const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')}`;
-const fileKey = `customer-segmentation/segmented-result/${formattedDate}.json`;  // Use the date-only format
+const fileKey = `customer-segmentation/segmented-result/2024-11-08.json`;
 
-// Function to fetch JSON from S3
 export const fetchJsonFromS3 = async (): Promise<any> => {
+  if (!bucketName || !fileKey) {
+    throw new S3ConfigError();
+  }
+
   const params = {
     Bucket: bucketName,
     Key: fileKey,
   };
 
   try {
-    // Use GetObjectCommand to retrieve the object from S3
     const data = await s3Client.send(new GetObjectCommand(params));
-
-    // Read the response Body as a stream and convert it to text
     const body = await streamToString(data.Body);
-    
-    // Parse and return the file content as JSON
     return JSON.parse(body);
   } catch (error) {
-    console.error('Error fetching file from S3:', error);
-    throw new Error('Unable to fetch JSON from S3');
+    if (error instanceof CustomError) {
+      throw error;
+    }
+    throw new CustomError(400,`Error parsing JSON data from S3: ${error}`);
   }
 };
 
-// Helper function to convert a stream to string
 const streamToString = (stream: any): Promise<string> => {
   return new Promise((resolve, reject) => {
     const chunks: any[] = [];

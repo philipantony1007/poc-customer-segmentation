@@ -1,4 +1,3 @@
-import { Customer } from '@commercetools/platform-sdk';
 
 export interface EmailSegment {
   email: string;
