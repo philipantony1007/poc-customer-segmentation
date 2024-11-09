@@ -1,6 +1,5 @@
 import { createApiRoot } from '../client/create.client';
 import { Customer } from '@commercetools/platform-sdk';
-import { delay } from '../utils/batch.utils';
 
 export const fetchCustomerByEmail = async (email: string): Promise<Customer | null> => {
   const { body } = await createApiRoot()
@@ -26,6 +25,5 @@ export const updateCustomerGroup = async (customer: Customer, segment: string) =
       },
     })
     .execute();
-  await delay(10);
   return response;
 };

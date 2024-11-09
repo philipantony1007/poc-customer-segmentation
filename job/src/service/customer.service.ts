@@ -16,27 +16,39 @@ export const processCustomer = async (emailSegment: EmailSegment): Promise<{ res
   while (attempts < RETRY_LIMIT && !success) {
     try {
       const customer = await customerRepository.fetchCustomerByEmail(emailSegment.email);
-      if (!customer) throw new CustomerNotFoundError(emailSegment.email);
+      if (!customer) {
+          throw new CustomerNotFoundError(emailSegment.email);
+        }
 
       const updatedCustomer = await customerRepository.updateCustomerGroup(customer, emailSegment.segment);
       result = {
-        email: emailSegment.email,
+        email: updatedCustomer.body.email,
         customer_segment: emailSegment.segment,
-        customer_id: updatedCustomer.body.id,
-        customer_version: updatedCustomer.body.version,
       };
       success = true;
     } catch (error) {
-      if (!(error instanceof CustomerNotFoundError)) {
-        error = new CustomerUpdateError(emailSegment.email, emailSegment.segment);
+      attempts++; // Increment attempts here for clarity
+      
+      if (attempts === 1) {
+        console.log(`1st retry for email: ${emailSegment.email}, segment: ${emailSegment.segment}`);
+      } else if (attempts === 2) {
+        console.log(`2nd retry for email: ${emailSegment.email}, segment: ${emailSegment.segment}`);
+      } else if (attempts === 3) {
+        console.log(`3rd retry for email: ${emailSegment.email}, segment: ${emailSegment.segment}`);
       }
-      attempts++;
+
+      if (error instanceof CustomerNotFoundError) {
+        break; // Don't retry if the customer is not found
+      } else {
+        error = new CustomerUpdateError(emailSegment.email, emailSegment.segment); // Re-throw error with custom error
+      }
+      
       if (attempts < RETRY_LIMIT) await delay(RETRY_DELAY);
     }
   }
 
   return {
-    result: result ?? { email: emailSegment.email, customer_segment: emailSegment.segment, customer_id: null, customer_version: null },
+    result: result ?? { email: emailSegment.email, customer_segment: emailSegment.segment},
     success,
   };
 };
@@ -52,6 +64,7 @@ export const updateCustomerSegments = async (): Promise<{ successCount: number; 
   }
 
   const emails = flattenUserData(users);
+  console.log(`Total emails to process: ${emails.length}`);
   const emailBatches = batchArray(emails, 100);
   let successCount = 0;
   let failureCount = 0;
@@ -59,7 +72,6 @@ export const updateCustomerSegments = async (): Promise<{ successCount: number; 
   for (const emailBatch of emailBatches) {
     console.log(`Processing batch of ${emailBatch.length} emails`);
     const results = await Promise.all(emailBatch.map(processCustomer));
-    const currentBatchFailedEmails: EmailSegment[] = [];
 
     results.forEach(({ success, result }) => {
       if (success) {
@@ -67,24 +79,9 @@ export const updateCustomerSegments = async (): Promise<{ successCount: number; 
       } else {
         failureCount++;
         console.log(`Failed to update customer: ${result.email}, segment: ${result.customer_segment}`);
-        currentBatchFailedEmails.push({ email: result.email, segment: result.customer_segment });
+        failedEmails.push({ email: result.email, segment: result.customer_segment });
       }
     });
-
-    // Retry failed emails for the current batch only
-    if (currentBatchFailedEmails.length > 0) {
-      console.log(`Retrying ${currentBatchFailedEmails.length} failed emails in current batch`);
-      const retryResults = await Promise.all(currentBatchFailedEmails.map(({ email, segment }) => processCustomer({ email, segment })));
-
-      retryResults.forEach(({ success, result }) => {
-        if (success) {
-          successCount++;
-        } else {
-          failureCount++;
-          failedEmails.push({ email: result.email, segment: result.customer_segment }); // Log failure for second retry failure
-        }
-      });
-    }
   }
 
   return { successCount, failureCount, failedEmails };
